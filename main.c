@@ -1,46 +1,80 @@
 #include <stdio.h>
 #include <string.h>
 #include <openssl/evp.h>
+#include "defines.h"
+#include "io.h"
 #include "aes.h"
 
 int main(int arc, char *argv[])
 {
   int ret = 0;
-  unsigned char key[KEY_LEN_MAX] = "01234567890123456789012345678901";
-  unsigned char data[BUFF_LEN_MAX] = "HELLO WORLD!";
-  unsigned char cipher_txt[CIPHER_LEN_MAX];
-  unsigned char decrypted_txt[BUFF_LEN_MAX];
-  int cipher_txt_len, decrypted_txt_len;
+  unsigned char key[KEY_LEN_MAX];
+  unsigned char login[BUFF_LEN_MAX];
+  unsigned char password[BUFF_LEN_MAX];
+  unsigned char cipher1[CIPHER_LEN_MAX];
+  unsigned char cipher2[CIPHER_LEN_MAX];
+  unsigned char decrypted1[BUFF_LEN_MAX];
+  unsigned char decrypted2[BUFF_LEN_MAX];
+  int key_len;
+  int login_len;
+  int password_len;
+  int cipher1_len;
+  int cipher2_len;
+  int decrypted1_len;
+  int decrypted2_len;
 
-  ret = encrypt(data, strlen(data),
-                key, strlen(key),
-                cipher_txt, &cipher_txt_len);
-  if (ret == -1)
+  ret = input(login, &login_len, password, &password_len, &key_len);
+  if (ret < 0)
   {
+    printf("Wrong input\n");
     return -1;
   }
 
-  printf("CIPHER IS:\n");
-  BIO_dump_fp(stdout, (const char *)cipher_txt, cipher_txt_len);
-  printf("Encrypted text is:\n");
-  printf("%s\n", cipher_txt);
-
-  printf("\n----\n\n");
-
-  ret = decrypt(cipher_txt, cipher_txt_len,
-                key, strlen(key),
-                decrypted_txt, &decrypted_txt_len);
-  if (ret == -1)
+  ret = generate_key(login, login_len, key, key_len);
+  if (ret < 0)
   {
+    printf("Could not generate key\n");
     return -1;
   }
 
-  decrypted_txt[decrypted_txt_len] = '\0';
+  ret = encrypt(login, login_len,
+                key, key_len,
+                cipher1, &cipher1_len);
+  if (ret < 0)
+  {
+    printf("Could not encrypt login\n");
+    return -1;
+  }
 
-  printf("DATA IS:\n");
-  BIO_dump_fp(stdout, (const char *)decrypted_txt, cipher_txt_len);
-  printf("Decrypted text is:\n");
-  printf("%s\n", decrypted_txt);
+  ret = encrypt(password, password_len,
+                key, key_len,
+                cipher2, &cipher2_len);
+  if (ret < 0)
+  {
+    printf("Could not encrypt password\n");
+    return -1;
+  }
+
+  output("Login", login, login_len, cipher1, cipher1_len, key, key_len);
+  output("Password", password, password_len, cipher2, cipher2_len, key, key_len);
+
+  ret = test_correctness(login, login_len,
+                         cipher1, cipher1_len,
+                         key, key_len);
+  if (ret < 0)
+  {
+    printf("Incorrect encryption/decryption\n");
+    return -1;
+  }
+
+  ret = test_correctness(password, password_len,
+                         cipher2, cipher2_len,
+                         key, key_len);
+  if (ret < 0)
+  {
+    printf("Incorrect encryption/decryption\n");
+    return -1;
+  }
 
   return 0;
 }
