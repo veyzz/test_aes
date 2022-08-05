@@ -2,7 +2,7 @@ CC=gcc
 CFLAGS=-c -g
 LDFLAGS=-lcrypto
 
-SOURCES=main.c aes.c
+SOURCES=main.c aes.c io.c
 OBJECTS=$(SOURCES:.c=.o)
 EXECUTABLE=main
 
