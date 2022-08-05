@@ -1,9 +1,38 @@
+#include <string.h>
 #include <openssl/evp.h>
+#include <openssl/md5.h>
+#include "defines.h"
 #include "aes.h"
 
-int encrypt(const char *data, int data_len,
-            const char *key, int key_len,
-            char *cipher, int *cipher_len)
+int generate_key(const unsigned char *data, int data_len,
+                 unsigned char *key, int key_len)
+{
+  int ret = 0;
+
+  /* MD5 returns 128-bit value */
+  MD5(data, strlen(data), key);
+
+  switch(key_len)
+  {
+    case 16:
+      /* Nothing to do*/
+      break;
+    case 24:
+    case 32:
+      memcpy(key + 16, key, key_len - 16);
+      break;
+    default:
+      ret = -1;
+  }
+
+  key[key_len] = '\0';
+
+  return ret;
+}
+
+int encrypt(const unsigned char *data, int data_len,
+            const unsigned char *key, int key_len,
+            unsigned char *cipher, int *cipher_len)
 {
   int ret = 0;
   EVP_CIPHER_CTX* ctx;
@@ -56,6 +85,7 @@ int encrypt(const char *data, int data_len,
   slen += len;
 
   *cipher_len = slen;
+  cipher[*cipher_len] = '\0';
 
 EXIT:
   /* Clean up */
@@ -67,9 +97,9 @@ EXIT:
   return ret;
 }
 
-int decrypt(const char *cipher, int cipher_len,
-            const char *key, int key_len,
-            char *data, int *data_len)
+int decrypt(const unsigned char *cipher, int cipher_len,
+            const unsigned char *key, int key_len,
+            unsigned char *data, int *data_len)
 {
   int ret = 0;
   EVP_CIPHER_CTX* ctx;
@@ -122,6 +152,7 @@ int decrypt(const char *cipher, int cipher_len,
   slen += len;
 
   *data_len = slen;
+  data[*data_len] = '\0';
 
 EXIT:
   /* Clean up */
@@ -130,5 +161,39 @@ EXIT:
     EVP_CIPHER_CTX_free(ctx);
   }
 
+  return ret;
+}
+
+/* returns 0 if correct */
+int test_correctness(const unsigned char *data, int data_len,
+                     const unsigned char *encr_data, int encr_data_len,
+                     const unsigned char *key, int key_len)
+{
+  int ret = 0;
+  unsigned char decr_data[BUFF_LEN_MAX];
+  int decr_data_len;
+
+  ret = decrypt(encr_data, encr_data_len,
+                key, key_len,
+                decr_data, &decr_data_len);
+
+  if (ret != 0)
+  {
+    goto EXIT;
+  }
+
+  if (decr_data_len != data_len)
+  {
+    ret = -1;
+    goto EXIT;
+  }
+
+  if (0 != strncmp(data, decr_data, data_len))
+  {
+    ret = -1;
+    goto EXIT;
+  }
+
+EXIT:
   return ret;
 }
