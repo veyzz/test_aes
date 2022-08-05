@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include "defines.h"
 #include "io.h"
 
@@ -12,8 +13,22 @@ int input(unsigned char *login, int *login_len,
   printf("> Enter login: ");
   fgets(login, BUFF_LEN_MAX, stdin);
 
+  len = strlen(login);
+  if (login[len - 1] == '\n')
+  {
+    login[--len] = '\0';
+  }
+  *login_len = len;
+
   printf("> Enter password: ");
   fgets(password, BUFF_LEN_MAX, stdin);
+
+  len = strlen(password);
+  if (password[len - 1] == '\n')
+  {
+    password[--len] = '\0';
+  }
+  *password_len = len;
 
   printf("> Select key length (128, 192, 256): ");
   ret = scanf("%d", &len);

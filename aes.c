@@ -10,7 +10,7 @@ int generate_key(const unsigned char *data, int data_len,
   int ret = 0;
 
   /* MD5 returns 128-bit value */
-  MD5(data, strlen(data), key);
+  MD5(data, data_len, key);
 
   switch(key_len)
   {
